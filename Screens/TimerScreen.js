@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, FlatList, Alert, TouchableOpacity, Modal, StyleSheet } from 'react-native';
+import { View, Text, TextInput, FlatList, Alert, TouchableOpacity, Modal, StyleSheet, ScrollView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ProgressBar } from 'react-native-paper';
 import { Picker } from '@react-native-picker/picker';
 import { MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import Collapsible from 'react-native-collapsible';
+import AntDesign from '@expo/vector-icons/AntDesign';
 
 const categories = ['Workout', 'Study', 'Break'];
 
@@ -16,8 +18,8 @@ export default function TimerScreen({ navigation }) {
   const [modalVisible, setModalVisible] = useState(false);
   const [completedTimer, setCompletedTimer] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(categories[0]);
+  const [collapsedCategories, setCollapsedCategories] = useState({});
 
-  
   useEffect(() => {
     loadTimers();
   }, []);
@@ -89,8 +91,6 @@ export default function TimerScreen({ navigation }) {
               setCompletedTimer(updatedTimer.name);
               setModalVisible(true);
               const newTimers= timers.filter((timer)=>timer.id!=updatedTimer.id)
-              // const storedTimers = await AsyncStorage.setItem('timers',newTimers);
-
               saveToHistory(updatedTimer);
             }
             return updatedTimer;
@@ -104,14 +104,11 @@ export default function TimerScreen({ navigation }) {
 
   const saveToHistory = async (timer) => {
     const newTimer= timers.filter(value=> value.id!==timer.id)
-    console.log(newTimer,timers)
     await AsyncStorage.setItem('timers', JSON.stringify(newTimer));
-    console.log(timer,"107")
     setTimers(newTimer)
     const history = JSON.parse(await AsyncStorage.getItem('history')) || [];
     const newEntry = { name: timer.name, completedAt: new Date().toLocaleString(),category:timer.category };
     await AsyncStorage.setItem('history', JSON.stringify([newEntry, ...history]));
-
   };
 
   const startAllTimersInCategory = (category) => {
@@ -143,37 +140,87 @@ export default function TimerScreen({ navigation }) {
     });
     saveTimers(updatedTimers);
   };
-  const Category = ({categories,startAllTimersInCategory,resetAllTimersInCategory,pauseAllTimersInCategory,setSelectedCategory,selectedCategory}) => {
-    return (
-        <View>
-       <Picker selectedValue={selectedCategory} onValueChange={setSelectedCategory} style={styles.picker}>
-          {categories.map((cat) => (
-            <Picker.Item key={cat} label={cat} value={cat} />
-          ))}
-        </Picker>
 
+  const toggleCategoryCollapse = (category) => {
+    setCollapsedCategories(prevState => ({
+      ...prevState,
+      [category]: !prevState[category]
+    }));
+  };
+
+  const renderCategorySection = (category) => {
+    const categoryTimers = timers.filter(timer => timer.category === category && timer.status !== 'Completed');
+    return (
+      <View key={category}>
+   <View style={styles.categoryHeader}>
+   <TouchableOpacity onPress={() => toggleCategoryCollapse(category)} style={{flexDirection:"row",justifyContent:"space-around",alignItems:"center"}}>
+          <Text style={styles.categoryHeaderText}>{category} ({categoryTimers.length})</Text>
+          <AntDesign name="downcircle" size={20} color="#132a13" />
+        </TouchableOpacity>
+        
         <View style={styles.buttonRow}>
-          <TouchableOpacity style={styles.button} onPress={startAllTimersInCategory}>
-            <Text style={styles.buttonText}>Start All</Text>
+          <TouchableOpacity 
+            style={[styles.smallButton, { backgroundColor: '#66bb6a' }]} 
+            onPress={() => startAllTimersInCategory(category)}
+          >
+            <Text style={styles.smallButtonText}>Start All</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.button} onPress={pauseAllTimersInCategory}>
-            <Text style={styles.buttonText}>Pause All</Text>
+          <TouchableOpacity 
+            style={[styles.smallButton, { backgroundColor: '#ffcc80' }]} 
+            onPress={() => pauseAllTimersInCategory(category)}
+          >
+            <Text style={styles.smallButtonText}>Pause All</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.button} onPress={resetAllTimersInCategory}>
-            <Text style={styles.buttonText}>Reset All</Text>
+          <TouchableOpacity 
+            style={[styles.smallButton, { backgroundColor: '#1a237e' }]} 
+            onPress={() => resetAllTimersInCategory(category)}
+          >
+            <Text style={styles.smallButtonText}>Reset All</Text>
           </TouchableOpacity>
         </View>
 
+        <Collapsible collapsed={collapsedCategories[category]}>
+          {categoryTimers.map(timer => (
+            <View key={timer.id} style={styles.timerCard}>
+              <Text style={styles.timerText}>{timer.name}</Text>
+              <Text style={styles.timerSubText}>Remaining: {timer.remaining}s</Text>
+              <ProgressBar progress={timer.remaining / timer.duration} color="#e5383b" style={styles.progress} />
+              <View style={styles.buttonRow}>
+                <TouchableOpacity 
+                  style={[styles.smallButton, { backgroundColor: timer.status === 'Running' ? '#66bb6a' : '#1b5e20' }]} 
+                  onPress={() => startTimer(timer.id)} 
+                  disabled={timer.status === 'Completed'}
+                >
+                  <Text style={styles.smallButtonText}>Start</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.smallButton, { backgroundColor: timer.status === 'Paused' ? '#ffcc80' : '#e65100' }]} 
+                  onPress={() => pauseTimer(timer.id)} 
+                  disabled={timer.status !== 'Running'}
+                >
+                  <Text style={styles.smallButtonText}>Pause</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.smallButton, { backgroundColor: '#1a237e' }]} onPress={() => resetTimer(timer.id)}>
+                  <Text style={styles.smallButtonText}>Reset</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))}
+        </Collapsible>
+   </View>
+    
+  
+      
       </View>
-    )
-  }
+    );
+  };
+  
 
   return (
     <LinearGradient colors={['#4CAF50', '#e9f5db']} style={styles.container}>
       <View style={styles.content}>
-        {/* <Text></Text> */}
         <MaterialIcons name="timer" size={40} color="white" style={styles.icon} />
-        <TextInput placeholder="Timer Name" value={name} onChangeText={setName} style={styles.input} placeholderTextColor="#ddd" />
+        <TextInput placeholder="Timer Name"  value={name} onChangeText={setName} style={styles.input} placeholderTextColor="#ddd" />
         <TextInput placeholder="Duration (seconds)" value={duration} onChangeText={setDuration} keyboardType="numeric" style={styles.input} placeholderTextColor="#ddd" />
         <Picker selectedValue={category} onValueChange={setCategory} style={styles.picker}>
           {categories.map(cat => <Picker.Item key={cat} label={cat} value={cat} />)}
@@ -181,52 +228,11 @@ export default function TimerScreen({ navigation }) {
         
         <TouchableOpacity style={styles.button} onPress={addTimer}><Text style={styles.buttonText}>Add Timer</Text></TouchableOpacity>
         <TouchableOpacity style={[styles.button, styles.historyButton]} onPress={() => navigation.navigate('History')}><Text style={styles.buttonText}>View History</Text></TouchableOpacity>
+        <ScrollView>
+        {categories.map(category => renderCategorySection(category))}
+        </ScrollView>
 
-{/* <Category startAllTimersInCategory={startAllTimersInCategory} resetAllTimersInCategory={resetAllTimersInCategory} pauseAllTimersInCategory={pauseAllTimersInCategory} categories={categories} selectedCategory={selectedCategory} setCategory={setSelectedCategory}> 
-
-</Category> */}
-     <FlatList
-     data={timers.filter(timer => timer.status !== 'Completed')}
-   
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={({ item }) => (
-            <View style={styles.timerCard}>
-              {/* {console.log(item)} */}
-              <Text style={styles.timerText}>{item.name} ({item.category})</Text>
-              {item.category=="Completed"?
-              <Text style={styles.timerSubText}>Remaining: {item.remaining}s</Text>
-
-              :
-              <>
-                  <Text style={styles.timerSubText}>Remaining: {item.remaining}s</Text>
-              <ProgressBar progress={item.remaining / item.duration} color="#e5383b" style={styles.progress} />
-              <View style={styles.buttonRow}>
-              <TouchableOpacity 
-  style={[styles.smallButton, { backgroundColor: item.status === 'Running' ? '#66bb6a' : '#1b5e20' }]} 
-  onPress={() => startTimer(item.id)} 
-  disabled={item.status === 'Completed'}
->
-  <Text style={styles.smallButtonText}>Start</Text>
-</TouchableOpacity>
-
-<TouchableOpacity 
-  style={[styles.smallButton, { backgroundColor: item.status === 'Paused' ? '#ffcc80' : '#e65100' }]} 
-  onPress={() => pauseTimer(item.id)} 
-  disabled={item.status !== 'Running'}
->
-  <Text style={styles.smallButtonText}>Pause</Text>
-</TouchableOpacity>
-
-                <TouchableOpacity style={[styles.smallButton, { backgroundColor: '#1a237e' }]} onPress={() => resetTimer(item.id)}>
-                  <Text style={styles.smallButtonText}>Reset</Text>
-                </TouchableOpacity>
-              </View>
-              </>
-            }
-          
-            </View>
-          )}
-        />
+       
 
         <Modal visible={modalVisible} transparent={true}>
           <View style={styles.modalContainer}>
@@ -237,19 +243,17 @@ export default function TimerScreen({ navigation }) {
               </TouchableOpacity>
             </View>
           </View>
-
         </Modal>
       </View>
     </LinearGradient>
   );
 }
 
-
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { flex: 1, padding: 20, justifyContent: 'center' },
+  content: { flex: 1, padding: 20, },
   icon: { alignSelf: 'center', marginBottom: 15 },
-  input: { backgroundColor: 'rgba(255,255,255,0.2)', padding: 10, borderRadius: 5, marginBottom: 10, color: 'white' },
+  input: { backgroundColor: 'rgba(255,255,255,0.1)', padding: 10, borderRadius: 5, marginBottom: 10, color: 'white' },
   picker: { backgroundColor: 'rgba(255,255,255,0.2)', color: 'white', borderRadius: 5, marginBottom: 10 },
   button: { backgroundColor: '#2e7d32', padding: 12, borderRadius: 5, alignItems: 'center', marginBottom: 10 },
   buttonText: { color: 'white', fontWeight: 'bold' },
@@ -263,5 +267,7 @@ const styles = StyleSheet.create({
   smallButtonText: { color: 'white', fontWeight: 'bold' },
   modalContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },
   modalBox: { backgroundColor: 'white', padding: 20, borderRadius: 10 },
-  modalText: { fontSize: 18, fontWeight: 'bold', textAlign: 'center' }
+  modalText: { fontSize: 18, fontWeight: 'bold', textAlign: 'center' },
+  categoryHeader: { backgroundColor: 'rgba(255,255,255,0.2)', padding: 10, borderRadius: 5, marginBottom: 10,gap:15 },
+  categoryHeaderText: { color: '#111', fontSize: 18, fontWeight: 'bold' }
 });

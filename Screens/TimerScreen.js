@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { View, Text, TextInput, FlatList, Alert, TouchableOpacity, Modal, StyleSheet, ScrollView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ProgressBar } from 'react-native-paper';
@@ -7,10 +7,17 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Collapsible from 'react-native-collapsible';
 import AntDesign from '@expo/vector-icons/AntDesign';
+import { ThemeContext } from '../Context/ThemeContext';
+import ToggleButton from 'react-native-paper';
+import ThemeSwitcher from '../Components/ThemeSwitch';
 
 const categories = ['Workout', 'Study', 'Break'];
 
 export default function TimerScreen({ navigation }) {
+
+  const {theme}= useContext(ThemeContext)
+  const styles = getStyles(theme); 
+
   const [timers, setTimers] = useState([]);
   const [name, setName] = useState('');
   const [duration, setDuration] = useState('');
@@ -19,6 +26,8 @@ export default function TimerScreen({ navigation }) {
   const [completedTimer, setCompletedTimer] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(categories[0]);
   const [collapsedCategories, setCollapsedCategories] = useState({});
+
+  const [showInput,setShowInput]= useState(false)
 
   useEffect(() => {
     loadTimers();
@@ -148,42 +157,57 @@ export default function TimerScreen({ navigation }) {
     }));
   };
 
+
+  const AddTimerList= ()=>{
+    return(
+<>
+<TextInput placeholder="Timer Name"  value={name} onChangeText={setName} style={styles.input} placeholderTextColor="#ddd" />
+        <Text allowFontScaling={false}Input placeholder="Duration (seconds)" value={duration} onChangeText={setDuration} keyboardType="numeric" style={styles.input} placeholderTextColor="#ddd" />
+        <Picker selectedValue={category} onValueChange={setCategory} style={styles.picker}>
+          {categories.map(cat => <Picker.Item key={cat} label={cat} value={cat} />)}
+        </Picker> 
+        <TouchableOpacity style={styles.button} onPress={addTimer}><Text style={styles.buttonText}>Add Timer</Text></TouchableOpacity>
+</>
+    )
+  }
+
   const renderCategorySection = (category) => {
     const categoryTimers = timers.filter(timer => timer.category === category && timer.status !== 'Completed');
     return (
       <View key={category}>
    <View style={styles.categoryHeader}>
    <TouchableOpacity onPress={() => toggleCategoryCollapse(category)} style={{flexDirection:"row",justifyContent:"space-around",alignItems:"center"}}>
-          <Text style={styles.categoryHeaderText}>{category} ({categoryTimers.length})</Text>
-          <AntDesign name="downcircle" size={20} color="#132a13" />
+          <Text allowFontScaling={false} style={styles.categoryHeaderText}>{category} ({categoryTimers.length})</Text>
+          <AntDesign name="downcircle" size={20} color={theme=='light'?"#132a13":"#fff"} />
         </TouchableOpacity>
         
-        <View style={styles.buttonRow}>
+    
+
+        <Collapsible collapsed={collapsedCategories[category]}>
+        <View style={[styles.buttonRow,{marginBottom:10}]}>
           <TouchableOpacity 
             style={[styles.smallButton, { backgroundColor: '#66bb6a' }]} 
             onPress={() => startAllTimersInCategory(category)}
           >
-            <Text style={styles.smallButtonText}>Start All</Text>
+            <Text allowFontScaling={false} style={styles.smallButtonText}>Start All</Text>
           </TouchableOpacity>
           <TouchableOpacity 
             style={[styles.smallButton, { backgroundColor: '#ffcc80' }]} 
             onPress={() => pauseAllTimersInCategory(category)}
           >
-            <Text style={styles.smallButtonText}>Pause All</Text>
+            <Text allowFontScaling={false} style={styles.smallButtonText}>Pause All</Text>
           </TouchableOpacity>
           <TouchableOpacity 
             style={[styles.smallButton, { backgroundColor: '#1a237e' }]} 
             onPress={() => resetAllTimersInCategory(category)}
           >
-            <Text style={styles.smallButtonText}>Reset All</Text>
+            <Text allowFontScaling={false} style={styles.smallButtonText}>Reset All</Text>
           </TouchableOpacity>
         </View>
-
-        <Collapsible collapsed={collapsedCategories[category]}>
           {categoryTimers.map(timer => (
             <View key={timer.id} style={styles.timerCard}>
-              <Text style={styles.timerText}>{timer.name}</Text>
-              <Text style={styles.timerSubText}>Remaining: {timer.remaining}s</Text>
+              <Text allowFontScaling={false} style={styles.timerText}>{timer.name}</Text>
+              <Text allowFontScaling={false} style={styles.timerSubText}>Remaining: {timer.remaining}s</Text>
               <ProgressBar progress={timer.remaining / timer.duration} color="#e5383b" style={styles.progress} />
               <View style={styles.buttonRow}>
                 <TouchableOpacity 
@@ -191,17 +215,17 @@ export default function TimerScreen({ navigation }) {
                   onPress={() => startTimer(timer.id)} 
                   disabled={timer.status === 'Completed'}
                 >
-                  <Text style={styles.smallButtonText}>Start</Text>
+                  <Text allowFontScaling={false} style={styles.smallButtonText}>Start</Text>
                 </TouchableOpacity>
                 <TouchableOpacity 
                   style={[styles.smallButton, { backgroundColor: timer.status === 'Paused' ? '#ffcc80' : '#e65100' }]} 
                   onPress={() => pauseTimer(timer.id)} 
                   disabled={timer.status !== 'Running'}
                 >
-                  <Text style={styles.smallButtonText}>Pause</Text>
+                  <Text allowFontScaling={false} style={styles.smallButtonText}>Pause</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.smallButton, { backgroundColor: '#1a237e' }]} onPress={() => resetTimer(timer.id)}>
-                  <Text style={styles.smallButtonText}>Reset</Text>
+                  <Text allowFontScaling={false} style={styles.smallButtonText}>Reset</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -217,16 +241,21 @@ export default function TimerScreen({ navigation }) {
   
 
   return (
-    <LinearGradient colors={['#4CAF50', '#e9f5db']} style={styles.container}>
+    <LinearGradient 
+  colors={theme === 'light' ? ['#e9f5db', '#4CAF50', '#e9f5db'] : ['#132a13', '#1b5e20', '#132a13']} 
+  style={styles.container}>
       <View style={styles.content}>
-        <MaterialIcons name="timer" size={40} color="white" style={styles.icon} />
-        <TextInput placeholder="Timer Name"  value={name} onChangeText={setName} style={styles.input} placeholderTextColor="#ddd" />
-        <TextInput placeholder="Duration (seconds)" value={duration} onChangeText={setDuration} keyboardType="numeric" style={styles.input} placeholderTextColor="#ddd" />
-        <Picker selectedValue={category} onValueChange={setCategory} style={styles.picker}>
-          {categories.map(cat => <Picker.Item key={cat} label={cat} value={cat} />)}
-        </Picker>
+        <View style={{flexDirection:"row",justifyContent:"flex-end"}}>
         
-        <TouchableOpacity style={styles.button} onPress={addTimer}><Text style={styles.buttonText}>Add Timer</Text></TouchableOpacity>
+
+        <ThemeSwitcher></ThemeSwitcher>
+        </View>
+        <MaterialIcons name="timer" size={40} color={theme=='light'?"#004b23":"#fff"} style={styles.icon} />
+ <AddTimerList></AddTimerList>
+
+
+
+     
         <TouchableOpacity style={[styles.button, styles.historyButton]} onPress={() => navigation.navigate('History')}><Text style={styles.buttonText}>View History</Text></TouchableOpacity>
         <ScrollView>
         {categories.map(category => renderCategorySection(category))}
@@ -237,9 +266,9 @@ export default function TimerScreen({ navigation }) {
         <Modal visible={modalVisible} transparent={true}>
           <View style={styles.modalContainer}>
             <View style={styles.modalBox}>
-              <Text style={styles.modalText}>🎉 {completedTimer} Completed!</Text>
+              <Text allowFontScaling={false} style={styles.modalText}>🎉 {completedTimer} Completed!</Text>
               <TouchableOpacity style={[styles.button, { marginTop: 10 }]} onPress={() => setModalVisible(false)}>
-                <Text style={styles.buttonText}>OK</Text>
+                <Text allowFontScaling={false} style={styles.buttonText}>OK</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -247,27 +276,80 @@ export default function TimerScreen({ navigation }) {
       </View>
     </LinearGradient>
   );
+
+  
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme) => StyleSheet.create({
   container: { flex: 1 },
-  content: { flex: 1, padding: 20, },
+  content: { flex: 1, padding: 20 },
   icon: { alignSelf: 'center', marginBottom: 15 },
-  input: { backgroundColor: 'rgba(255,255,255,0.1)', padding: 10, borderRadius: 5, marginBottom: 10, color: 'white' },
-  picker: { backgroundColor: 'rgba(255,255,255,0.2)', color: 'white', borderRadius: 5, marginBottom: 10 },
-  button: { backgroundColor: '#2e7d32', padding: 12, borderRadius: 5, alignItems: 'center', marginBottom: 10 },
+  input: { 
+    backgroundColor: theme === 'light' ? '#4CAF50' : 'rgba(0,0,0,0.6)', 
+    padding: 10, 
+    borderRadius: 5, 
+    marginBottom: 10, 
+    color: theme === 'light' ? 'black' : 'white' 
+  },
+  picker: { 
+    backgroundColor: theme === 'light' ? '#4CAF50' : 'rgba(0,0,0,0.5)', 
+    color: theme === 'light' ? 'black' : 'white', 
+    borderRadius: 5, 
+    marginBottom: 10 
+  },
+  button: { 
+    backgroundColor: theme === 'light' ? '#2e7d32' : '#388e3c', 
+    padding: 12, 
+    borderRadius: 5, 
+    alignItems: 'center', 
+    marginBottom: 10 
+  },
   buttonText: { color: 'white', fontWeight: 'bold' },
-  historyButton: { backgroundColor: '#1b5e20' },
-  timerCard: { backgroundColor: 'rgba(255,255,255,0.2)', padding: 15, borderRadius: 8, marginBottom: 10 },
-  timerText: { color: '#111', fontSize: 16, fontWeight: 'bold' },
-  timerSubText: { color: '#e65100' ,fontWeight:"bold"},
+  historyButton: { backgroundColor: theme === 'light' ? '#1b5e20' : '#4caf50' },
+  timerCard: { 
+    backgroundColor: theme === 'light' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.4)', 
+    padding: 15, 
+    borderRadius: 8, 
+    marginBottom: 10 
+  },
+  timerText: { 
+    color: theme === 'light' ? '#111' : 'white', 
+    fontSize: 16, 
+    fontWeight: 'bold' 
+  },
+  timerSubText: { 
+    color: theme === 'light' ? '#e65100' : '#ff9800', 
+    fontWeight: 'bold' 
+  },
   progress: { height: 10, borderRadius: 5, marginVertical: 5 },
   buttonRow: { flexDirection: 'row', justifyContent: 'space-between' },
   smallButton: { padding: 8, borderRadius: 5, alignItems: 'center', flex: 1, marginHorizontal: 5 },
   smallButtonText: { color: 'white', fontWeight: 'bold' },
   modalContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },
-  modalBox: { backgroundColor: 'white', padding: 20, borderRadius: 10 },
-  modalText: { fontSize: 18, fontWeight: 'bold', textAlign: 'center' },
-  categoryHeader: { backgroundColor: 'rgba(255,255,255,0.2)', padding: 10, borderRadius: 5, marginBottom: 10,gap:15 },
-  categoryHeaderText: { color: '#111', fontSize: 18, fontWeight: 'bold' }
+  modalBox: { 
+    backgroundColor: theme === 'light' ? 'white' : '#333', 
+    padding: 20, 
+    borderRadius: 10 
+  },
+  modalText: { 
+    fontSize: 18, 
+    fontWeight: 'bold', 
+    textAlign: 'center', 
+    color: theme === 'light' ? 'black' : 'white' 
+  },
+  categoryHeader: { 
+    backgroundColor: theme === 'light' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.4)', 
+    padding: 10, 
+    borderRadius: 5, 
+    marginBottom: 10, 
+    gap: 15 ,
+    justifyContent:"center",
+    marginTop:10
+  },
+  categoryHeaderText: { 
+    color: theme === 'light' ? '#111' : 'white', 
+    fontSize: 16, 
+    fontWeight: 'bold' 
+  }
 });
+

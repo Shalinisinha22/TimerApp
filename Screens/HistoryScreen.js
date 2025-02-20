@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, Alert, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect, useContext } from 'react';
+import { View, Text, FlatList, Alert, TouchableOpacity, useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
+import { ThemeContext } from '../Context/ThemeContext';
 
 export default function HistoryScreen({ navigation }) {
   const [history, setHistory] = useState([]);
-
+const {theme} = useContext(ThemeContext)
   useEffect(() => {
     loadHistory();
   }, []);
@@ -59,15 +60,29 @@ export default function HistoryScreen({ navigation }) {
   };
 
   return (
-    <LinearGradient colors={['#4CAF50', '#e9f5db']} style={{ flex: 1 }}>
+    <LinearGradient 
+      colors={theme === 'light' ? ['#4CAF50', '#e9f5db'] : ['#1b5e20', '#132a13']} 
+      style={{ flex: 1 }}
+    >
       <View style={{ flex: 1, padding: 20 }}>
         <FlatList
           data={history}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <View style={{ padding: 10, borderBottomWidth: 1 }}>
-              <Text style={{ fontSize: 16 }}>{item.name} ({item.category})</Text>
-              <Text style={{ color: 'gray' }}>Completed: {item.completedAt}</Text>
+            <View style={{
+              padding: 10,
+              borderBottomWidth: 1,
+              borderBottomColor: theme === 'light' ? '#ccc' : '#555',
+            }}>
+              <Text allowFontScaling={false} style={{ 
+                fontSize: 16, 
+                color: theme === 'light' ? '#111' : '#fff' 
+              }}>
+                {item.name} ({item.category})
+              </Text>
+              <Text allowFontScaling={false} style={{ color: theme === 'light' ? 'gray' : '#bbb' }}>
+                Completed: {item.completedAt}
+              </Text>
             </View>
           )}
         />
@@ -75,17 +90,32 @@ export default function HistoryScreen({ navigation }) {
         {history.length !== 0 && (
           <>
             <TouchableOpacity 
-              style={{ backgroundColor: '#132a13', padding: 15, borderRadius: 20, alignItems: "center", marginBottom: 10 }} 
+              style={{ 
+                backgroundColor: theme === 'light' ? '#132a13' : '#4caf50', 
+                padding: 12, 
+                borderRadius: 20, 
+                alignItems: "center", 
+                marginBottom: 10 
+              }} 
               onPress={clearHistory}
             >
-              <Text style={{ color: "#fff", textAlign: "center", fontSize: 18 }}>Clear History</Text>
+              <Text allowFontScaling={false} style={{ color: "#fff", textAlign: "center", fontSize: 16 }}>
+                Clear History
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={{ backgroundColor: '#1b5e20', padding: 15, borderRadius: 20, alignItems: "center" }} 
+              style={{ 
+                backgroundColor: theme === 'light' ? '#1b5e20' : '#388e3c', 
+                padding: 12, 
+                borderRadius: 20, 
+                alignItems: "center" 
+              }} 
               onPress={exportHistory}
             >
-              <Text style={{ color: "#fff", textAlign: "center", fontSize: 18 }}>Export History</Text>
+              <Text allowFontScaling={false} style={{ color: "#fff", textAlign: "center", fontSize: 16 }}>
+                Export History
+              </Text>
             </TouchableOpacity>
           </>
         )}
